@@ -104,7 +104,8 @@ async def get_recent_score(session: CommandSession):
 
         # json处理和发送最终生成的成绩，包含了图片
         a = "[CQ:image,file=" + str(json_str["data"][0]["musicImage"]
-                                     .replace("https://static.universal-space.cn/images/konami/music5/","http://127.0.0.1/img/") + "]" +
+                                    #.replace("https://static.universal-space.cn/images/konami/music5/","http://127.0.0.1/img/")
+                                    + "]" +
                                 str(json_str["data"][0]["musicName"]) + "[" +
                                 json_str["data"][0]["musicGradeName"]
                                     .replace("NOVICE", "NOV")
