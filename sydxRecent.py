@@ -103,22 +103,23 @@ async def get_recent_score(session: CommandSession):
     else:
 
         # json处理和发送最终生成的成绩，包含了图片
-        a = "[CQ:image,file=" + (str(json_str["data"][0]["musicImage"]) + "]" +
-                                 str(json_str["data"][0]["musicName"]) + "[" +
-                                 json_str["data"][0]["musicGradeName"]
-                                 .replace("NOVICE", "NOV")
-                                 .replace("ADVANCED", "ADV")
-                                 .replace("EXHAUST", "EXH")
-                                 .replace("MAXIMUM", "MXM")
-                                 .replace("INFINITE", "INF")
-                                 .replace("VIVID", "VVD") + "]\n" +
-                                 str(json_str["data"][0]["score"]) + "  " +
-                                 str(json_str["data"][0]["criticalCount"]) + "/" +
-                                 str(json_str["data"][0]["nearCount"]) + "/" +
-                                 str(json_str["data"][0]["errorCount"]) + "\n" +
-                                 json_str["data"][0]["clearTypeName"] + "  " +
-                                 timeDelta(json_str["data"][0]["gameDate"])
-                                 ) + "[CQ:at,qq=" + qq + "]"
+        a = "[CQ:image,file=" + str(json_str["data"][0]["musicImage"]
+                                     .replace("https://static.universal-space.cn/images/konami/music5/","http://127.0.0.1/img/") + "]" +
+                                str(json_str["data"][0]["musicName"]) + "[" +
+                                json_str["data"][0]["musicGradeName"]
+                                    .replace("NOVICE", "NOV")
+                                    .replace("ADVANCED", "ADV")
+                                    .replace("EXHAUST", "EXH")
+                                    .replace("MAXIMUM", "MXM")
+                                    .replace("INFINITE", "INF")
+                                    .replace("VIVID", "VVD") + "]\n" +
+                                str(json_str["data"][0]["score"]) + "  " +
+                                str(json_str["data"][0]["criticalCount"]) + "/" +
+                                str(json_str["data"][0]["nearCount"]) + "/" +
+                                str(json_str["data"][0]["errorCount"]) + "\n" +
+                                json_str["data"][0]["clearTypeName"] + "  " +
+                                timeDelta(json_str["data"][0]["gameDate"])
+                                ) + "[CQ:at,qq=" + qq + "]"
         await session.send(a)
 
 
