@@ -54,9 +54,17 @@ def get_new_token(qq):
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
     token = query_token(qq)
+    try:
+        num = int(session.current_arg_text.strip())
+    except:
+        num = 3
+    if not num: 
+        num = 3
+    elif num >6:
+        num = 6
 
     # 获取成绩json
-    url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=1&pageSize=5&orderBy' \
+    url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=1&pageSize='+ str(num) + '&orderBy' \
           '=gameDate '
     playdata = requests.get(url, headers={'token': token})
     json_str = playdata.json()
@@ -67,8 +75,8 @@ async def get_recent_score(session: CommandSession):
 
         # json处理和发送最终生成的成绩
         i = 0
-        a = "[CQ:at,qq=" + qq + "]" + "最近的游戏记录：\n"
-        while i < 5:
+        a = "[CQ:at,qq=" + qq + "]" + "最近的" + str(num) +"条游戏记录：\n"
+        while i < num:
             a += (str(json_str["data"][i]["musicName"]) + "[" +
                   json_str["data"][i]["musicGradeName"].replace("NOVICE", "NOV").replace("ADVANCED", "ADV")
                   .replace("EXHAUST", "EXH").replace("MAXIMUM", "MXM")
