@@ -1,5 +1,6 @@
 import datetime
 import json
+import os
 import sqlite3
 import requests
 from nonebot import on_command, CommandSession
@@ -58,14 +59,15 @@ async def get_recent_score(session: CommandSession):
         num = int(session.current_arg_text.strip())
     except:
         num = 3
-    if not num: 
+    if not num:
         num = 3
-    elif num >6:
+    elif num > 6:
         num = 6
 
     # 获取成绩json
-    url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=1&pageSize='+ str(num) + '&orderBy' \
-          '=gameDate '
+    url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=1&pageSize=' + str(
+        num) + '&orderBy' \
+               '=gameDate '
     playdata = requests.get(url, headers={'token': token})
     json_str = playdata.json()
     if json_str["code"] == 403:
@@ -75,7 +77,7 @@ async def get_recent_score(session: CommandSession):
 
         # json处理和发送最终生成的成绩
         i = 0
-        a = "[CQ:at,qq=" + qq + "]" + "最近的" + str(num) +"条游戏记录：\n"
+        a = "[CQ:at,qq=" + qq + "]" + "最近的" + str(num) + "条游戏记录：\n"
         while i < num:
             a += (str(json_str["data"][i]["musicName"]) + "[" +
                   json_str["data"][i]["musicGradeName"].replace("NOVICE", "NOV").replace("ADVANCED", "ADV")
@@ -108,27 +110,39 @@ async def get_recent_score(session: CommandSession):
     json_str = playdata.json()
     if json_str["code"] == 403:
         await session.send(get_new_token(qq))
+    elif json_str["pageSize"] == 0:
+        await session.send("数字过大， 你可能还没有玩那么多首歌")
     else:
 
-        # json处理和发送最终生成的成绩，包含了图片
-        a = "[CQ:image,file=" + str(json_str["data"][0]["musicImage"]
-                                    #.replace("https://static.universal-space.cn/images/konami/music5/","http://127.0.0.1/img/")
-                                    + "]" +
-                                str(json_str["data"][0]["musicName"]) + "[" +
-                                json_str["data"][0]["musicGradeName"]
+        score = json_str["data"][0]
+
+        img_file = "jk_" + str(score["musicId"]).zfill(4) + "_" + str(
+            score["musicGrade"] + 1) + ".png"
+        if os.path.exists(r'/usr/httpserver/img/' + img_file):
+            img_url = "http://127.0.0.1/img/jk_" + str(score["musicId"]).zfill(4) + "_" + str(
+                score["musicGrade"] + 1) + ".png"
+        else:
+            img_url = "http://127.0.0.1/img/jk_" + str(score["musicId"]).zfill(4) + "_" + str(
+                1) + ".png"
+
+        a = "[CQ:image,file=" + str(img_url
+                                    + "]\n" +
+                                    str(score["musicName"]) + "[" +
+                                    score["musicGradeName"]
                                     .replace("NOVICE", "NOV")
                                     .replace("ADVANCED", "ADV")
                                     .replace("EXHAUST", "EXH")
                                     .replace("MAXIMUM", "MXM")
                                     .replace("INFINITE", "INF")
                                     .replace("VIVID", "VVD") + "]\n" +
-                                str(json_str["data"][0]["score"]) + "  " +
-                                str(json_str["data"][0]["criticalCount"]) + "/" +
-                                str(json_str["data"][0]["nearCount"]) + "/" +
-                                str(json_str["data"][0]["errorCount"]) + "\n" +
-                                json_str["data"][0]["clearTypeName"] + "  " +
-                                timeDelta(json_str["data"][0]["gameDate"])
-                                ) + "[CQ:at,qq=" + qq + "]"
+                                    str(score["score"]) + "  " +
+                                    str(score["criticalCount"]) + "/" +
+                                    str(score["nearCount"]) + "/" +
+                                    str(score["errorCount"]) + "\n" +
+                                    score["clearTypeName"] + "  " +
+                                    timeDelta(json_str["data"][0]["gameDate"])
+                                    ) + "  [CQ:at,qq=" + qq + "]"
+        print(a)
         await session.send(a)
 
 
