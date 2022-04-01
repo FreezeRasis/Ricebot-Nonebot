@@ -65,16 +65,31 @@ def get_music(string):
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
     input_str = session.current_arg_text.strip()
-    img_file = "jk_" + str(get_music(input_str)[0]).zfill(4) + "_3.png"
-    if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
-        img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
-            3) + ".png"
+    if not input_str:
+        conn = sqlite3.connect(database)
+        c = conn.cursor()
+        c.execute('SELECT * FROM diffinfo ORDER BY RANDOM() limit 1')
+        music = c.fetchone()
+        img_file = "jk_" + str(music[0]).zfill(4) + "_3.png"
+        if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
+            img_url = "http://127.0.0.1/img/jk_" + str(music[0]).zfill(4) + "_" + str(3) + ".png"
+        else:
+            img_url = "http://127.0.0.1/img/jk_" + str(music[0]).zfill(4) + "_" + str(1) + ".png"
+        await session.send("[CQ:at,qq=" + qq + "]随机抽到的歌曲是：" + music[2] + "[CQ:image,file=" + str(img_url)
+                           + "]")
+
     else:
-        img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
-            1) + ".png"
-    print(str(get_music(input_str)))
-    await session.send("您要找的歌曲是不是：" + get_music(input_str)[1] + "[CQ:image,file=" + str(img_url)
-                       + "]")
+        img_file = "jk_" + str(get_music(input_str)[0]).zfill(4) + "_3.png"
+        if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
+            img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
+                3) + ".png"
+        else:
+            img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
+                1) + ".png"
+        print(str(get_music(input_str)))
+        await session.send("您要找的歌曲是不是：" + get_music(input_str)[1] + "[CQ:image,file=" + str(img_url)
+                           + "]")
+
 
 # 获取新token
 def get_new_token(qq):
