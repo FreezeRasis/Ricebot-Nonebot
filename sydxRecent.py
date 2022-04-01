@@ -35,6 +35,53 @@ def query_token(qq):
     conn.close()
 
 
+def get_diff_name(music_id, diff_number):
+    diff_str = ""
+    if diff_number == 0:
+        diff_str = "NOV"
+    if diff_number == 1:
+        diff_str = "ADV"
+    if diff_number == 2:
+        diff_str = "EXH"
+    if diff_number == 4:
+        diff_str = "MXM"
+    if diff_number == 3:
+        conn = sqlite3.connect(database)
+        c = conn.cursor()
+        c.execute('select infver from diffinfo where ID = (?)', (music_id,))
+        diff_str = c.fetchone()[0]
+    return diff_str
+
+
+def get_music(string):
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+    c.execute('select id,name from diffinfo where name like "%%%s%%"' % string)
+    music = c.fetchone()
+    return music
+
+
+@on_command('.find', aliases=('.find', '.f'), only_to_me=False)
+async def get_recent_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    if input_str == "666":
+        img_url = "http://127.0.0.1/img/jk_1580_5.png"
+        await session.send("您要找的歌曲是不是：" + "666" + "[CQ:image,file=" + img_url
+                           + "]")
+    else:
+        img_file = "jk_" + str(get_music(input_str)[0]).zfill(4) + "_3.png"
+        if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
+            img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
+                3) + ".png"
+        else:
+            img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
+                1) + ".png"
+        print(str(get_music(input_str)))
+        await session.send("您要找的歌曲是不是：" + get_music(input_str)[1] + "[CQ:image,file=" + str(img_url)
+                           + "]")
+
+
 # 获取新token
 def get_new_token(qq):
     conn = sqlite3.connect(database)
@@ -79,13 +126,12 @@ async def get_recent_score(session: CommandSession):
         a = "[CQ:at,qq=" + qq + "]" + "最近的" + str(num) + "条游戏记录："
         while i < num:
             a += "\n" + (str(json_str["data"][i]["musicName"]) + "[" +
-                  json_str["data"][i]["musicGradeName"].replace("NOVICE", "NOV").replace("ADVANCED", "ADV")
-                  .replace("EXHAUST", "EXH").replace("MAXIMUM", "MXM")
-                  .replace("INFINITE", "INF").replace("VIVID", "VVD") + "]\n" +
-                  str(json_str["data"][i]["score"]) + "  " +
-                  json_str["data"][i]["clearTypeName"] + "  " +
-                  timeDelta(json_str["data"][i]["gameDate"])
-                  )
+                         get_diff_name(json_str["data"][i]["musicId"], json_str["data"][i]["musicGrade"])
+                         + "]\n" +
+                         str(json_str["data"][i]["score"]) + "  " +
+                         json_str["data"][i]["clearTypeName"] + "  " +
+                         timeDelta(json_str["data"][i]["gameDate"])
+                         )
             i += 1
         await session.send(a)
 
@@ -120,7 +166,7 @@ async def get_recent_score(session: CommandSession):
         print(img_file)
         if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
             img_url = "http://127.0.0.1/img/jk_" + str(score["musicId"]).zfill(4) + "_" + str(
-            score["musicGrade"] + 1) + ".png"
+                score["musicGrade"] + 1) + ".png"
         else:
             img_url = "http://127.0.0.1/img/jk_" + str(score["musicId"]).zfill(4) + "_" + str(
                 1) + ".png"
@@ -128,13 +174,8 @@ async def get_recent_score(session: CommandSession):
         a = "[CQ:image,file=" + str(img_url
                                     + "]" +
                                     str(score["musicName"]) + "[" +
-                                    score["musicGradeName"]
-                                    .replace("NOVICE", "NOV")
-                                    .replace("ADVANCED", "ADV")
-                                    .replace("EXHAUST", "EXH")
-                                    .replace("MAXIMUM", "MXM")
-                                    .replace("INFINITE", "INF")
-                                    .replace("VIVID", "VVD") + "]\n" +
+                                    get_diff_name(score["musicId"], score["musicGrade"])
+                                    + "]\n" +
                                     str(score["score"]) + "  " +
                                     str(score["criticalCount"]) + "/" +
                                     str(score["nearCount"]) + "/" +
@@ -142,7 +183,7 @@ async def get_recent_score(session: CommandSession):
                                     score["clearTypeName"] + "  " +
                                     timeDelta(json_str["data"][0]["gameDate"])
                                     ) + "  [CQ:at,qq=" + qq + "]"
-        print(a)
+        print('\n\n' + a + '\n\n')
         await session.send(a)
 
 
