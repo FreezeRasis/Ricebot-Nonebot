@@ -28,11 +28,11 @@ def query_token(qq):
     conn = sqlite3.connect(database)
     c = conn.cursor()
     c.execute('SELECT * FROM info WHERE qq = (?)', (qq,))
+    conn.close()
     try:
         return c.fetchone()[3]
     except:
         return None
-    conn.close()
 
 
 def get_diff_name(music_id, diff_number):
@@ -59,6 +59,92 @@ def get_music(string):
     c.execute('select id,name from diffinfo where name like "%%%s%%" order by id DESC' % string)
     music = c.fetchone()
     return music
+
+
+
+def get_rank(input_str, diff, qq):
+    token = query_token(qq)
+    music_id = str(get_music(input_str)[0])
+    url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + music_id + "&musicGrade=" + str(diff)
+    playdata = requests.get(url, headers={'token': token})
+    json_str = playdata.json()
+    if json_str["code"] == 403:
+        return get_new_token(qq)
+    else:
+        score = json_str["data"]["rankInfo"]
+
+    img_file = "jk_" + str(music_id).zfill(4) + "_" + str(
+        diff + 1) + ".png"
+    print(img_file)
+
+    if not json_str["data"]["rankInfo"]:
+        return "你好像还没打过这首歌"
+
+    if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
+        img_url = "http://127.0.0.1/img/jk_" + str(music_id).zfill(4) + "_" + str(diff + 1) + ".png"
+    else:
+        img_url = "http://127.0.0.1/img/jk_" + str(music_id).zfill(4) + "_" + str(1) + ".png"
+
+    a = "[CQ:image,file=" + img_url + "]" + str(score["musicName"]) + " [" + get_diff_name(music_id, diff) + "]\n" + \
+        str(score["artistName"]) + "\n分数：" + str(score["score"]) + "\n排名：" + str(int(score["rank"])) + " [CQ:at,qq=" + qq + "]"
+    return a
+
+
+@on_command('.mynov', aliases=('.mynov', '.mn'), only_to_me=False)
+async def get_recent_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_rank(input_str, 0, qq))
+
+
+@on_command('.myadv', aliases=('.myadv', '.ma'), only_to_me=False)
+async def get_recent_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_rank(input_str, 1, qq))
+
+
+@on_command('.myexh', aliases=('.myexh', '.me'), only_to_me=False)
+async def get_recent_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_rank(input_str, 2, qq))
+
+
+@on_command('.myinf', aliases=('.myinf', '.mygrv', '.myhvn', 'myvvd'), only_to_me=False)
+async def get_recent_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_rank(input_str, 3, qq))
+
+
+@on_command('.mymxm', aliases=('.mymxm', '.mm'), only_to_me=False)
+async def get_recent_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_rank(input_str, 4, qq))
+
+
+'''
+@on_command('.myexh', aliases=('.myexh', '.me'), only_to_me=False)
+async def get_recent_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    token = query_token(qq)
+    music_id = str(get_music(input_str)[0])
+    url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + music_id + "&musicGrade=2"
+    playdata = requests.get(url, headers={'token': token})
+    json_str = playdata.json()
+    if json_str["code"] == 403:
+        await session.send(get_new_token(qq))
+    else:
+        score = json_str["data"]["rankInfo"]
+    print(score["musicName"])
+    print(score["gradeName"])
+    print(score["artistName"])
+    print(score["score"])
+    print(score["rank"])
+'''
 
 
 @on_command('.find', aliases=('.find', '.f'), only_to_me=False)
@@ -199,6 +285,7 @@ async def get_recent_score(session: CommandSession):
                                     ) + "  [CQ:at,qq=" + qq + "]"
         print('\n\n' + a + '\n\n')
         await session.send(a)
+
 
 @on_command('.bind', aliases=('.bind', '.b'), only_to_me=False)
 async def get_captcha(session: CommandSession):
