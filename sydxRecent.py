@@ -125,28 +125,6 @@ async def get_recent_score(session: CommandSession):
     await session.send(get_rank(input_str, 4, qq))
 
 
-'''
-@on_command('.myexh', aliases=('.myexh', '.me'), only_to_me=False)
-async def get_recent_score(session: CommandSession):
-    qq = str(session.ctx['user_id'])
-    input_str = session.current_arg_text.strip()
-    token = query_token(qq)
-    music_id = str(get_music(input_str)[0])
-    url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + music_id + "&musicGrade=2"
-    playdata = requests.get(url, headers={'token': token})
-    json_str = playdata.json()
-    if json_str["code"] == 403:
-        await session.send(get_new_token(qq))
-    else:
-        score = json_str["data"]["rankInfo"]
-    print(score["musicName"])
-    print(score["gradeName"])
-    print(score["artistName"])
-    print(score["score"])
-    print(score["rank"])
-'''
-
-
 @on_command('.find', aliases=('.find', '.f'), only_to_me=False)
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
