@@ -180,6 +180,11 @@ async def get_recent_score(session: CommandSession):
             img_url = "http://127.0.0.1/img/jk_" + str(score["musicId"]).zfill(4) + "_" + str(
                 1) + ".png"
         print(img_url)
+        # 判断是否是个人最佳
+        if score["highestScore"] == score["score"]:
+            is_pb = "PB"
+        else:
+            is_pb = ""
         a = "[CQ:image,file=" + str(img_url
                                     + "]" +
                                     str(score["musicName"]) + "[" +
@@ -188,13 +193,12 @@ async def get_recent_score(session: CommandSession):
                                     str(score["score"]) + "  " +
                                     str(score["criticalCount"]) + "/" +
                                     str(score["nearCount"]) + "/" +
-                                    str(score["errorCount"]) + "\n" +
+                                    str(score["errorCount"]) + " " + is_pb + "\n" +
                                     score["clearTypeName"] + "  " +
                                     timeDelta(json_str["data"][0]["gameDate"])
                                     ) + "  [CQ:at,qq=" + qq + "]"
         print('\n\n' + a + '\n\n')
         await session.send(a)
-
 
 @on_command('.bind', aliases=('.bind', '.b'), only_to_me=False)
 async def get_captcha(session: CommandSession):
