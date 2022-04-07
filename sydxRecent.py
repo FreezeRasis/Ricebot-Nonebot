@@ -28,11 +28,12 @@ def query_token(qq):
     conn = sqlite3.connect(database)
     c = conn.cursor()
     c.execute('SELECT * FROM info WHERE qq = (?)', (qq,))
-    conn.close()
     try:
         return c.fetchone()[3]
     except:
         return None
+    finally:
+        conn.close()
 
 
 def get_diff_name(music_id, diff_number):
@@ -59,7 +60,6 @@ def get_music(string):
     c.execute('select id,name from diffinfo where name like "%%%s%%" order by id DESC' % string)
     music = c.fetchone()
     return music
-
 
 
 def get_rank(input_str, diff, qq):
@@ -90,39 +90,51 @@ def get_rank(input_str, diff, qq):
     return a
 
 
-@on_command('.mynov', aliases=('.mynov', '.mn'), only_to_me=False)
+def get_rank_for_pb(music_id, diff, qq):
+    token = query_token(qq)
+    url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + str(music_id) + "&musicGrade=" + str(diff)
+    playdata = requests.get(url, headers={'token': token})
+    json_str = playdata.json()
+    score = json_str["data"]["rankInfo"]
+    return score["rank"]
+
+
+@on_command('.nov', aliases=('.nov', '.n'), only_to_me=False)
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
     input_str = session.current_arg_text.strip()
     await session.send(get_rank(input_str, 0, qq))
 
 
-@on_command('.myadv', aliases=('.myadv', '.ma'), only_to_me=False)
+@on_command('.adv', aliases=('.adv', '.a'), only_to_me=False)
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
     input_str = session.current_arg_text.strip()
     await session.send(get_rank(input_str, 1, qq))
 
 
-@on_command('.myexh', aliases=('.myexh', '.me'), only_to_me=False)
+@on_command('.exh', aliases=('.exh', '.e'), only_to_me=False)
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
     input_str = session.current_arg_text.strip()
     await session.send(get_rank(input_str, 2, qq))
 
 
-@on_command('.myinf', aliases=('.myinf', '.mygrv', '.myhvn', 'myvvd'), only_to_me=False)
+@on_command('.my4', aliases=('.i', '.g', '.h', '.v', '.m'), only_to_me=False)
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
     input_str = session.current_arg_text.strip()
-    await session.send(get_rank(input_str, 3, qq))
-
-
-@on_command('.mymxm', aliases=('.mymxm', '.mm'), only_to_me=False)
-async def get_recent_score(session: CommandSession):
-    qq = str(session.ctx['user_id'])
-    input_str = session.current_arg_text.strip()
-    await session.send(get_rank(input_str, 4, qq))
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+    c.execute('select id,infver,name from diffinfo where name like "%%%s%%" order by id DESC' % input_str)
+    music = c.fetchone()
+    if not music[1]:
+        await session.send("这首歌好像没有第四难度")
+    else:
+        if music[1] == "MXM":
+            await session.send(get_rank(input_str, 4, qq))
+        else:
+            await session.send(get_rank(input_str, 3, qq))
 
 
 @on_command('.find', aliases=('.find', '.f'), only_to_me=False)
@@ -163,7 +175,7 @@ def get_new_token(qq):
         phone = str(c.execute('SELECT phone FROM info WHERE qq = (?)', (qq,)).fetchone()[0])
         url = 'https://iot.universal-space.cn/api/sms/captcha/get/'
         requests.post(url + phone)
-        return "获取失败，已重新申请验证码\n指令：.a 验证码"
+        return "获取失败，已重新申请验证码\n指令：.c 验证码"
     except:
         return "请先绑定手机。指令：\n.b 手机号"
     finally:
@@ -246,7 +258,7 @@ async def get_recent_score(session: CommandSession):
         print(img_url)
         # 判断是否是个人最佳
         if score["highestScore"] == score["score"]:
-            is_pb = "PB"
+            is_pb = "PB #" + str(int(get_rank_for_pb(score["musicId"], score["musicGrade"], qq)))
         else:
             is_pb = ""
         a = "[CQ:image,file=" + str(img_url
@@ -283,11 +295,11 @@ async def get_captcha(session: CommandSession):
     finally:
         conn.commit()
         requests.post(url + phone)
-        await session.send("已请求验证码，认证指令：\n.a 验证码")
+        await session.send("已请求验证码，请注意认证指令已经变为：\n.c 验证码")
         conn.close()
 
 
-@on_command('.auth', aliases=('.auth', '.a'), only_to_me=False)
+@on_command('.captcha', aliases=('.captcha', '.c'), only_to_me=False)
 async def auth_captcha(session: CommandSession):
     qq = str(session.ctx['user_id'])
     url = 'https://iot.universal-space.cn/api/unis/Myself/loginUser?mobile='
