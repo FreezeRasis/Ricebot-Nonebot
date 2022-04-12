@@ -57,8 +57,9 @@ def get_diff_name(music_id, diff_number):
 def get_music(string):
     conn = sqlite3.connect(database)
     c = conn.cursor()
-    c.execute('select id,name from diffinfo where name like "%%%s%%" order by id DESC' % string)
-    music = c.fetchone()
+    music = c.execute("select id,name from diffinfo where upper(name) = upper('%s')" % string).fetchone()
+    if not music:
+        music = c.execute('select id,name from diffinfo where name like "%%%s%%" order by id DESC' % string).fetchone()
     return music
 
 
