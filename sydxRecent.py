@@ -8,7 +8,7 @@ from nonebot import on_command, CommandSession
 import openpyxl
 from openpyxl.comments import Comment
 
-book = openpyxl.load_workbook('song_alter_test.xlsx') #Form contain song's original and alternative name. There's only one in the project.
+book = openpyxl.load_workbook('song_alter.xlsx') #Form contain song's original and alternative name. There's only one in the project.
 sheet = book.active
 
 def song_find(key):
