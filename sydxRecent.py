@@ -5,6 +5,46 @@ import sqlite3
 import requests
 from nonebot import on_command, CommandSession
 
+import openpyxl
+from openpyxl.comments import Comment
+
+book = openpyxl.load_workbook('song_alter_test.xlsx') #Form contain song's original and alternative name. There's only one in the project.
+sheet = book.active
+
+def song_find(key):
+    #You only need one arguement, which is the keyword of the song's alternative/original name 
+    row_count = 0
+    for row in sheet.iter_rows():
+        row_count = row_count + 1
+        for cell in row:
+            if cell.value == key:
+                return sheet.cell(row_count, 1).value   #Retuen the original name, which in the first column.
+            elif cell.value == None:
+                break
+    return False #When song no found, return the original search key for the original search engine.
+
+def alter_add(new, exist, qqid):
+    #You need 3 arguement, new name, exisied name, and the uploader's QQID
+    exist = song_find(exist)
+    for row in sheet.iter_rows():
+        for cell in row:
+            if cell.value == exist:
+                for cell in row:
+                    if sheet.cell(cell.row, cell.column+1).value == None:
+                        sheet.cell(cell.row, cell.column+1).value = new
+                        comment = Comment(qqid, 'Ricebot')
+                        comment.width = 100
+                        comment.height = 10
+                        sheet.cell(cell.row, cell.column+1).comment = comment #Add uploader's QQID as comment
+                        book.save('song_alter_test.xlsx')
+                        return '已添加，请输入/search 歌曲名 查看'     #add alternative name
+                    elif sheet.cell(cell.row, cell.column+1).value == new:
+                        return "该别名已存在库中"   #Check for existing alternative name
+            elif cell.value == None:
+                break
+    return '歌曲未找到，请确定格式为 /add 旧名称|||新名称'   #when no song found
+
+
 database = 'myDB.sqlite3'
 
 
@@ -65,7 +105,7 @@ def get_music(string):
 
 def get_rank(input_str, diff, qq):
     token = query_token(qq)
-    music_id = str(get_music(input_str)[0])
+    music_id = str(get_music(song_find(input_str))[0])
     url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + music_id + "&musicGrade=" + str(diff)
     playdata = requests.get(url, headers={'token': token})
     json_str = playdata.json()
@@ -156,15 +196,15 @@ async def get_recent_score(session: CommandSession):
                            + "]")
 
     else:
-        img_file = "jk_" + str(get_music(input_str)[0]).zfill(4) + "_3.png"
+        img_file = "jk_" + str(get_music(song_find(input_str))[0]).zfill(4) + "_3.png"
         if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
-            img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
+            img_url = "http://127.0.0.1/img/jk_" + str(get_music(song_find(input_str))[0]).zfill(4) + "_" + str(
                 3) + ".png"
         else:
-            img_url = "http://127.0.0.1/img/jk_" + str(get_music(input_str)[0]).zfill(4) + "_" + str(
+            img_url = "http://127.0.0.1/img/jk_" + str(get_music(song_find(input_str))[0]).zfill(4) + "_" + str(
                 1) + ".png"
-        print(str(get_music(input_str)))
-        await session.send("您要找的歌曲是不是：" + get_music(input_str)[1] + "[CQ:image,file=" + str(img_url)
+        print(str(get_music(song_find(input_str))))
+        await session.send("您要找的歌曲是不是：" + get_music(song_find(input_str))[1] + "[CQ:image,file=" + str(img_url)
                            + "]")
 
 
@@ -327,3 +367,14 @@ async def auth_captcha(session: CommandSession):
     finally:
         await session.send(a)
         conn.close()
+
+#Add song alternative name
+@on_command('add')
+async def add(session: CommandSession):
+    user_id = session.ctx['user_id']
+    text = session.current_arg_text.strip()
+    if text.find('|||') == -1:
+        await session.send('请正确输入命令，用法: /add 旧名字|||新别名')
+    else:
+        old, new = text.split('|||', 1)
+        await session.send(alter_add(new, old, user_id))
