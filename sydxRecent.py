@@ -57,9 +57,11 @@ def get_diff_name(music_id, diff_number):
 def get_music(string):
     conn = sqlite3.connect(database)
     c = conn.cursor()
-    music = c.execute("select id,name from diffinfo where upper(name) = upper('%s')" % string).fetchone()
+    music = c.execute("select id,name from diffinfo where name = '%s'" % string).fetchone()
     if not music:
-        music = c.execute('select id,name from diffinfo where name like "%%%s%%" order by id DESC' % string).fetchone()
+        music = c.execute("select id,name from diffinfo where upper(name) = upper('%s')" % string).fetchone()
+    if not music:
+        music = c.execute('select id,name from diffinfo where name like "%%%s%%" order by id' % string).fetchone()
     return music
 
 
@@ -67,7 +69,7 @@ def get_rank(input_str, diff, qq):
     token = query_token(qq)
     music_id = str(get_music(input_str)[0])
     url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + music_id + "&musicGrade=" + str(diff)
-    playdata = requests.get(url, headers={'token': token})
+    playdata = requests.get(url, timeout=1, headers={'token': token})
     json_str = playdata.json()
     if json_str["code"] == 403:
         return get_new_token(qq)
@@ -87,17 +89,30 @@ def get_rank(input_str, diff, qq):
         img_url = "http://127.0.0.1/img/jk_" + str(music_id).zfill(4) + "_" + str(1) + ".png"
 
     a = "[CQ:image,file=" + img_url + "]" + str(score["musicName"]) + " [" + get_diff_name(music_id, diff) + "]\n" + \
-        str(score["artistName"]) + "\n分数：" + str(score["score"]) + "\n排名：" + str(int(score["rank"])) + " [CQ:at,qq=" + qq + "]"
+        str(score["artistName"]) + "\n分数：" + str(score["score"]) + "\n排名：" + str(
+        int(score["rank"])) + " [CQ:at,qq=" + qq + "]"
     return a
 
 
 def get_rank_for_pb(music_id, diff, qq):
     token = query_token(qq)
-    url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + str(music_id) + "&musicGrade=" + str(diff)
-    playdata = requests.get(url, headers={'token': token})
+    url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + str(music_id) + "&musicGrade=" + str(
+        diff)
+    playdata = requests.get(url, timeout=1, headers={'token': token})
     json_str = playdata.json()
     score = json_str["data"]["rankInfo"]
     return score["rank"]
+
+
+def convert_clearTypeName(clearTypeName):
+    if clearTypeName == "Hard Clear":
+        return "HC"
+    elif clearTypeName == "Full Combo":
+        return "UC"
+    elif clearTypeName == "Perfect":
+        return "PUC"
+    else:
+        return clearTypeName
 
 
 @on_command('.nov', aliases=('.nov', '.n'), only_to_me=False)
@@ -121,7 +136,7 @@ async def get_recent_score(session: CommandSession):
     await session.send(get_rank(input_str, 2, qq))
 
 
-@on_command('.my4', aliases=('.i', '.g', '.h', '.v', '.m'), only_to_me=False)
+@on_command('.my4', aliases=('.m'), only_to_me=False)
 async def get_recent_score(session: CommandSession):
     qq = str(session.ctx['user_id'])
     input_str = session.current_arg_text.strip()
@@ -175,7 +190,7 @@ def get_new_token(qq):
     try:
         phone = str(c.execute('SELECT phone FROM info WHERE qq = (?)', (qq,)).fetchone()[0])
         url = 'https://iot.universal-space.cn/api/sms/captcha/get/'
-        requests.post(url + phone)
+        requests.post(url + phone, timeout=1)
         return "获取失败，已重新申请验证码\n指令：.c 验证码"
     except:
         return "请先绑定手机。指令：\n.b 手机号"
@@ -201,7 +216,7 @@ async def get_recent_score(session: CommandSession):
     url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=1&pageSize=' + str(
         num) + '&orderBy' \
                '=gameDate '
-    playdata = requests.get(url, headers={'token': token})
+    playdata = requests.get(url, timeout=1, headers={'token': token})
     json_str = playdata.json()
     if json_str["code"] == 403:
         await session.send(get_new_token(qq))
@@ -215,7 +230,7 @@ async def get_recent_score(session: CommandSession):
                          get_diff_name(json_str["data"][i]["musicId"], json_str["data"][i]["musicGrade"])
                          + "]\n" +
                          str(json_str["data"][i]["score"]) + "  " +
-                         json_str["data"][i]["clearTypeName"] + "  " +
+                         convert_clearTypeName(json_str["data"][i]["clearTypeName"]) + "  " +
                          timeDelta(json_str["data"][i]["gameDate"])
                          )
             i += 1
@@ -237,7 +252,7 @@ async def get_recent_score(session: CommandSession):
     # 获取成绩json
     url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=' + str(num) + \
           '&pageSize=1&orderBy=gameDate'
-    playdata = requests.get(url, headers={'token': token})
+    playdata = requests.get(url, timeout=1, headers={'token': token})
     json_str = playdata.json()
     if json_str["code"] == 403:
         await session.send(get_new_token(qq))
@@ -271,7 +286,7 @@ async def get_recent_score(session: CommandSession):
                                     str(score["criticalCount"]) + "/" +
                                     str(score["nearCount"]) + "/" +
                                     str(score["errorCount"]) + " " + is_pb + "\n" +
-                                    score["clearTypeName"] + "  " +
+                                    convert_clearTypeName(score["clearTypeName"]) + "  " +
                                     timeDelta(json_str["data"][0]["gameDate"])
                                     ) + "  [CQ:at,qq=" + qq + "]"
         print('\n\n' + a + '\n\n')
@@ -295,7 +310,7 @@ async def get_captcha(session: CommandSession):
         c.execute(r"INSERT INTO info (qq,phone) VALUES (%s,%s);" % (qq, phone))
     finally:
         conn.commit()
-        requests.post(url + phone)
+        requests.post(url + phone, timeout=1)
         await session.send("已请求验证码，请注意认证指令已经变为：\n.c 验证码")
         conn.close()
 
@@ -312,7 +327,7 @@ async def auth_captcha(session: CommandSession):
     try:
         phone = str(c.execute('SELECT phone FROM info WHERE qq = (?)', (qq,)).fetchone()[0])
         if phone:
-            response = requests.post(url + phone + "&captcha=" + captcha)
+            response = requests.post(url + phone + "&captcha=" + captcha, timeout=1)
             s = json.loads(response.text)
             print(s)
             if s["retCode"] in [404, 103]:
