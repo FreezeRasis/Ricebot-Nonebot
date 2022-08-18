@@ -69,7 +69,7 @@ def get_rank(input_str, diff, qq):
     token = query_token(qq)
     music_id = str(get_music(input_str)[0])
     url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + music_id + "&musicGrade=" + str(diff)
-    playdata = requests.get(url, timeout=1, headers={'token': token})
+    playdata = requests.get(url, timeout=5, headers={'token': token})
     json_str = playdata.json()
     if json_str["code"] == 403:
         return get_new_token(qq)
@@ -98,7 +98,7 @@ def get_rank_for_pb(music_id, diff, qq):
     token = query_token(qq)
     url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + str(music_id) + "&musicGrade=" + str(
         diff)
-    playdata = requests.get(url, timeout=1, headers={'token': token})
+    playdata = requests.get(url, timeout=5, headers={'token': token})
     json_str = playdata.json()
     score = json_str["data"]["rankInfo"]
     return score["rank"]
@@ -113,6 +113,68 @@ def convert_clearTypeName(clearTypeName):
         return "PUC"
     else:
         return clearTypeName
+
+
+def get_top(input_str, diff, qq):
+    token = query_token(qq)
+    music_id = str(get_music(input_str)[0])
+    music_name = str(get_music(input_str)[1])
+    url = "https://iot.universal-space.cn/api/konami/music5/musicRank?musicId=" + music_id + "&musicGrade=" + str(diff)
+    playdata = requests.get(url, timeout=5, headers={'token': token})
+    json_str = playdata.json()
+    img_file = "jk_" + str(music_id).zfill(4) + "_" + str(diff + 1) + ".png"
+    if os.path.exists(r'/usr/bot/httpserver/img/' + img_file):
+        img_url = "http://127.0.0.1/img/jk_" + str(music_id).zfill(4) + "_" + str(diff + 1) + ".png"
+    else:
+        img_url = "http://127.0.0.1/img/jk_" + str(music_id).zfill(4) + "_" + str(1) + ".png"
+    a = "[CQ:image,file=" + img_url + "]" + music_name + " [" + get_diff_name(music_id, diff) + "]\n"
+    if json_str["code"] == 403:
+        return get_new_token(qq)
+    else:
+        scorelist = json_str["data"]["rankList"]
+        count = 0
+        while count < 10:
+            a += str(int(scorelist[count]["rank"])) + " " + str(scorelist[count]["score"]) + " " + str(scorelist[count]["nickName"]) + "\n"
+            count += 1
+    return a
+
+
+@on_command('.novtop', aliases='.nt', only_to_me=False)
+async def get_top_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_top(input_str, 0, qq))
+
+
+@on_command('.advtop', aliases='.at', only_to_me=False)
+async def get_top_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_top(input_str, 1, qq))
+
+
+@on_command('.exhtop', aliases='.et', only_to_me=False)
+async def get_top_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    await session.send(get_top(input_str, 2, qq))
+
+
+@on_command('.mxmtop', aliases='.mt', only_to_me=False)
+async def get_top_score(session: CommandSession):
+    qq = str(session.ctx['user_id'])
+    input_str = session.current_arg_text.strip()
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+    c.execute('select id,infver,name from diffinfo where name like "%%%s%%" order by id DESC' % input_str)
+    music = c.fetchone()
+    if not music[1]:
+        await session.send("这首歌好像没有第四难度")
+    else:
+        if music[1] == "MXM":
+            await session.send(get_top(input_str, 4, qq))
+        else:
+            await session.send(get_top(input_str, 3, qq))
 
 
 @on_command('.nov', aliases=('.nov', '.n'), only_to_me=False)
@@ -190,7 +252,7 @@ def get_new_token(qq):
     try:
         phone = str(c.execute('SELECT phone FROM info WHERE qq = (?)', (qq,)).fetchone()[0])
         url = 'https://iot.universal-space.cn/api/sms/captcha/get/'
-        requests.post(url + phone, timeout=1)
+        requests.post(url + phone, timeout=5)
         return "获取失败，已重新申请验证码\n指令：.c 验证码"
     except:
         return "请先绑定手机。指令：\n.b 手机号"
@@ -216,7 +278,7 @@ async def get_recent_score(session: CommandSession):
     url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=1&pageSize=' + str(
         num) + '&orderBy' \
                '=gameDate '
-    playdata = requests.get(url, timeout=1, headers={'token': token})
+    playdata = requests.get(url, timeout=5, headers={'token': token})
     json_str = playdata.json()
     if json_str["code"] == 403:
         await session.send(get_new_token(qq))
@@ -252,7 +314,7 @@ async def get_recent_score(session: CommandSession):
     # 获取成绩json
     url = 'https://iot.universal-space.cn/api/mns/mnsGame/recordList?productId=3084&pageNo=' + str(num) + \
           '&pageSize=1&orderBy=gameDate'
-    playdata = requests.get(url, timeout=1, headers={'token': token})
+    playdata = requests.get(url, timeout=5, headers={'token': token})
     json_str = playdata.json()
     if json_str["code"] == 403:
         await session.send(get_new_token(qq))
@@ -310,8 +372,8 @@ async def get_captcha(session: CommandSession):
         c.execute(r"INSERT INTO info (qq,phone) VALUES (%s,%s);" % (qq, phone))
     finally:
         conn.commit()
-        requests.post(url + phone, timeout=1)
-        await session.send("已请求验证码，请注意认证指令已经变为：\n.c 验证码")
+        requests.post(url + phone, timeout=5)
+        await session.send("已请求验证码，请注意认证指令已经变为：\n.c 验证码\n记得撤回手机号码")
         conn.close()
 
 
@@ -327,7 +389,7 @@ async def auth_captcha(session: CommandSession):
     try:
         phone = str(c.execute('SELECT phone FROM info WHERE qq = (?)', (qq,)).fetchone()[0])
         if phone:
-            response = requests.post(url + phone + "&captcha=" + captcha, timeout=1)
+            response = requests.post(url + phone + "&captcha=" + captcha, timeout=5)
             s = json.loads(response.text)
             print(s)
             if s["retCode"] in [404, 103]:
